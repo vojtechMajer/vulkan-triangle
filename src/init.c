@@ -63,7 +63,7 @@ void init(State* state)
 
     createCommandPool(state);
 
-    allocateCommandBuffer(state);
+    allocateCommandBuffers(state);
 
     createSyncObject(state);    
 }
@@ -662,21 +662,22 @@ void createCommandPool(State* state)
         "failed to create command pool", "created command pool");
 }
 
-void allocateCommandBuffer(State* state)
+void allocateCommandBuffers(State* state)
 {
     VkCommandBufferAllocateInfo allocInf = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = NULL,
         
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
+        .commandBufferCount = MAX_FRAMES_IN_FLIGHT, // needs one command buffer per each frame in flight
 
         .commandPool = state->commandPool
     };
 
-    assertVk(vkAllocateCommandBuffers(state->device, &allocInf, &state->commandBuffer), 
+    state->commandBuffers = (VkCommandBuffer*) malloc(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT);
+
+    assertVk(vkAllocateCommandBuffers(state->device,&allocInf,state->commandBuffers),
     "failed to allocate command buffer", "allocated command buffer");
-    ;
 }
 
 
@@ -699,24 +700,32 @@ void createSyncObject(State* state)
         .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
 
-    state->syncSemImgAvail = (VkSemaphore*) malloc(sizeof(VkSemaphore)*1);
-    state->syncSemRndrFinsh = (VkSemaphore*) malloc(sizeof(VkSemaphore)*1);
-    state->syncFenInFlight = (VkFence*) malloc(sizeof(VkFence)*1);
+    state->syncSemImgAvail = (VkSemaphore*) malloc(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT);
+    state->syncSemRndrFinsh = (VkSemaphore*) malloc(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT);
+    state->syncFenInFlight = (VkFence*) malloc(sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT);
 
-    assertVk(vkCreateSemaphore(state->device, &semCrtInf, state->allocator, &state->syncSemImgAvail[0]), "failed to create semaphore", "created semaphore");
-    assertVk(vkCreateSemaphore(state->device, &semCrtInf, state->allocator, &state->syncSemRndrFinsh[0]), "failed to create semaphore", "created semaphore");
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        assertVk(vkCreateSemaphore(state->device, &semCrtInf, state->allocator, &state->syncSemImgAvail[i]), "failed to create semaphore", "created semaphore");
+        assertVk(vkCreateSemaphore(state->device, &semCrtInf, state->allocator, &state->syncSemRndrFinsh[i]), "failed to create semaphore", "created semaphore");
+        assertVk(vkCreateFence(state->device, &fenCrtInf, state->allocator, &state->syncFenInFlight[i]), "failed to create fence", "created fence");
+    }
 
-    assertVk(vkCreateFence(state->device, &fenCrtInf, state->allocator, &state->syncFenInFlight[0]), "failed to create fence", "created fence");
 
 }
 
 
 void cleanUp(State* state)
 {
-    vkDestroySemaphore(state->device, state->syncSemImgAvail[0], state->allocator);
-    vkDestroySemaphore(state->device, state->syncSemRndrFinsh[0], state->allocator);
-    vkDestroyFence(state->device, state->syncFenInFlight[0], state->allocator);
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroySemaphore(state->device, state->syncSemImgAvail[i], state->allocator);
+        vkDestroySemaphore(state->device, state->syncSemRndrFinsh[i], state->allocator);
+        vkDestroyFence(state->device, state->syncFenInFlight[i], state->allocator);
+    }
+
     vkDestroyCommandPool(state->device, state->commandPool, state->allocator);
+
     for (uint32_t i = 0; i < state->swapchainImageCount; i++)
     {
         vkDestroyFramebuffer(state->device, state->swapChainFrameBuffers[i], state->allocator);

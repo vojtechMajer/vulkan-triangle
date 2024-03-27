@@ -10,6 +10,9 @@
 #define WINDOW_HEIGHT 600
 
 #define REQUESTED_SWAPCHAIN_IMAGE_COUNT 3
+
+#define MAX_FRAMES_IN_FLIGHT 2
+
 typedef struct State
 {
     // allocator -> allocator for vulkan objects 
@@ -37,7 +40,7 @@ typedef struct State
     VkQueue graphicsQueue;
         
     VkCommandPool commandPool;
-    VkCommandBuffer commandBuffer;
+    VkCommandBuffer* commandBuffers;
 
     VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
@@ -128,7 +131,7 @@ void createGraphicsPipeline(State* state);
 void createFramebuffers(State* state);
 
 void createCommandPool(State* state);
-void allocateCommandBuffer(State* state);
+void allocateCommandBuffers(State* state);
 
 void createSyncObject(State* state);
 
