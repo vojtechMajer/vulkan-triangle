@@ -6,6 +6,7 @@
  * 
  */
 
+#include "debug.h"
 #include "utils.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -33,7 +34,6 @@ int main(void)
         // Proccess all pending events
         glfwPollEvents();
         drawFrame(&state);
-        currentFrame = (currentFrame+1) % MAX_FRAMES_IN_FLIGHT; 
 
     }
 
@@ -55,16 +55,28 @@ void drawFrame(State* state)
     // present swapchain image
 
     vkWaitForFences(state->device, 1, state->syncFenInFlight + currentFrame, VK_TRUE, UINT64_MAX);
-    vkResetFences(state->device, 1, state->syncFenInFlight + currentFrame );
 
     // refers to vkImage in swapchian images array (state.swapchainImages)
-    uint32_t imageIndex;
-    vkAcquireNextImageKHR(state->device, state->swapchain, UINT64_MAX , state->syncSemImgAvail[currentFrame], NULL, &imageIndex);
+    // image index
+    uint32_t imgIndex;
+    VkResult acquireImagerslt = vkAcquireNextImageKHR(state->device, state->swapchain, UINT64_MAX , state->syncSemImgAvail[currentFrame], NULL, &imgIndex);
+
+    if (acquireImagerslt == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateSwapchain(state);
+        return;
+    } 
+    else if (acquireImagerslt != VK_SUCCESS && acquireImagerslt != VK_SUBOPTIMAL_KHR)
+    {
+        assert_my(-1, "failed to acquire swapchain image", "");
+    }
+
+    vkResetFences(state->device, 1, state->syncFenInFlight + currentFrame );
 
     vkResetCommandBuffer(state->commandBuffers[currentFrame], 0);
-    recordCommandBuffer(state->commandBuffers[currentFrame], imageIndex, state);
+    recordCommandBuffer(state->commandBuffers[currentFrame], imgIndex, state);
     
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
     // submit info
     // waits on image available
     // signals render finished
@@ -97,11 +109,23 @@ void drawFrame(State* state)
 
         .swapchainCount = 1,
         .pSwapchains = &state->swapchain,
-        .pImageIndices = &imageIndex,
+        .pImageIndices = &imgIndex,
 
         .pResults = NULL,
     };
 
     // graphics queue should be present queue but graphics queue in this case also supports presenting
-    vkQueuePresentKHR(state->graphicsQueue, &presentInf);
+    VkResult queuePresentRslt = vkQueuePresentKHR(state->graphicsQueue, &presentInf);
+
+    if (queuePresentRslt == VK_ERROR_OUT_OF_DATE_KHR || queuePresentRslt == VK_SUBOPTIMAL_KHR)
+    {
+        recreateSwapchain(state);
+    } 
+    else if (queuePresentRslt != VK_SUCCESS)
+    {
+        assert_my(-1, "failed to present swap chain image", "");
+    }
+
+    currentFrame = (currentFrame+1) % MAX_FRAMES_IN_FLIGHT; 
+
 }

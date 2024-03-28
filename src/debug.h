@@ -21,7 +21,7 @@
 
 
 #define assertVk(EX, MSG, SCSMSG) if(EX != VK_SUCCESS){ fprintf(stderr, "%s in %s->%s on line %d\n", ERRMSG(MSG), __FILE__, __func__, __LINE__); exit(EXIT_FAILURE);} else {fprintf(stdout, "%s\n", SUCCESMSG(SCSMSG));};
-#define assert(EX, MSG, SCSMSG) if(!(EX)) { fprintf(stderr, " %s in %s->%s on line %d\n", ERRMSG(MSG), __FILE__, __func__, __LINE__); exit(EXIT_FAILURE);}else {fprintf(stdout, "%s\n", SUCCESMSG(SCSMSG));};
+#define assert_my(EX, MSG, SCSMSG) if(!(EX)) { fprintf(stderr, " %s in %s->%s on line %d\n", ERRMSG(MSG), __FILE__, __func__, __LINE__); exit(EXIT_FAILURE);}else {fprintf(stdout, "%s\n", SUCCESMSG(SCSMSG));};
 
 
 #define LOG(format, ...) fprintf (stderr, SUCCESMSG(format)"\n", ##__VA_ARGS__)

@@ -6,5 +6,6 @@
 
 double clamp(int d, int min, int max);
 void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, State* state);
+void recreateSwapchain(State* state);
 
 #endif // __UTILS_H__

@@ -11,7 +11,7 @@
 void init(State* state)
 {
     // Init GLFW
-    assert(glfwInit(), "failed to intialize glfw", "initialized glfw");
+    assert_my(glfwInit(), "failed to intialize glfw", "initialized glfw");
 
     // Create Window
     createWindow(state);
@@ -75,10 +75,10 @@ void createWindow(State* state)
     // window will be created for Vulkan not OpenGL
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // no window resizing
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     state->window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan Triangle", NULL, NULL);
-    assert(state->window, "failed to create window", "Created Window");
+    assert_my(state->window, "failed to create window", "Created Window");
 
 }
 
@@ -133,7 +133,7 @@ VkResult selectPhysicalDevice(State* state, VkPhysicalDevice* physycalDevice)
     
     VkResult rslt;
     vkEnumeratePhysicalDevices(state->instance, &physDevCount, NULL);
-    assert(physDevCount, "No device found", "Enumerated devices");
+    assert_my(physDevCount, "No device found", "Enumerated devices");
     physDevs = (VkPhysicalDevice*) malloc(sizeof(VkPhysicalDevice) * physDevCount);
     rslt = vkEnumeratePhysicalDevices(state->instance, &physDevCount, physDevs);
 
@@ -155,7 +155,7 @@ void pickQueueFamily(State* state)
     props = (VkQueueFamilyProperties*) malloc(sizeof(VkQueueFamilyProperties) * propCount);
     vkGetPhysicalDeviceQueueFamilyProperties(state->physicalDevice, &propCount, props);
 
-    assert(props,"failed to get queue families properties" , "queried queue family properties");
+    assert_my(props,"failed to get queue families properties" , "queried queue family properties");
 
     // picks first queue with grpahics bit
     for (int i = 0; i<propCount; i++)
@@ -221,9 +221,24 @@ void createSwapchain(State* state)
 
     state->swapchainFormat = selectSwapchainFormat(state);
 
-    state->extent.width = clamp(state->extent.width, surfCaps.minImageExtent.width, surfCaps.maxImageExtent.width); 
-    state->extent.height = clamp(state->extent.height, surfCaps.minImageExtent.height, surfCaps.maxImageExtent.height); 
-    
+    if (surfCaps.currentExtent.width != UINT32_MAX) {
+        state->extent = surfCaps.currentExtent;
+    }
+    else
+    {
+        int width, height;
+        glfwGetFramebufferSize(state->window, &width, &height);
+
+        VkExtent2D actualExtent = {
+            (width),
+            (height)
+        };
+        
+        actualExtent.width = clamp(actualExtent.width, surfCaps.minImageExtent.width, surfCaps.maxImageExtent.width);
+        actualExtent.height = clamp(actualExtent.height, surfCaps.minImageExtent.height, surfCaps.maxImageExtent.height);
+    } 
+
+
 
     VkSwapchainCreateInfoKHR swpchnCrtInf = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -273,7 +288,8 @@ void createSwapchain(State* state)
 void retrieveSwapchainImages(State* state)
 {
     vkGetSwapchainImagesKHR(state->device, state->swapchain, &state->swapchainImageCount, NULL);
-    state->swapchainImages = malloc(sizeof(VkImage)*state->swapchainImageCount);
+    
+    state->swapchainImages = (VkImage*) realloc(state->swapchainImages, sizeof(VkImage)*state->swapchainImageCount);
 
     assertVk(vkGetSwapchainImagesKHR(state->device, state->swapchain, &state->swapchainImageCount, state->swapchainImages)
     , "failed to retrieve swapchain images", "retrieved swapchain images");
@@ -283,7 +299,9 @@ void retrieveSwapchainImages(State* state)
 
 void createImageViews(State* state)
 {
-    state->imageViews = malloc(sizeof(VkImageView)* state->swapchainImageCount);
+    if (state->imageViews == NULL) {
+        state->imageViews = malloc(sizeof(VkImageView)* state->swapchainImageCount);
+    }
 
     for (uint32_t i = 0; i < state->swapchainImageCount; i++)
     {
@@ -323,7 +341,7 @@ VkSurfaceFormatKHR selectSwapchainFormat(State* state)
     formats = (VkSurfaceFormatKHR*) malloc(sizeof(VkSurfaceFormatKHR) * surfaceFormatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(state->physicalDevice, state->surface, &surfaceFormatCount, formats);
 
-    assert(formats,"failed to get formats" , "loaded formats");
+    assert_my(formats,"failed to get formats" , "loaded formats");
 
     
     for (uint32_t i = 0; i < surfaceFormatCount; i++)
@@ -620,7 +638,9 @@ void createGraphicsPipeline(State* state)
 
 void createFramebuffers(State* state)
 {
-    state->swapChainFrameBuffers = (VkFramebuffer*) malloc(sizeof(VkFramebuffer)*state->swapchainImageCount);
+    if (state->swapChainFrameBuffers == NULL) {
+        state->swapChainFrameBuffers = (VkFramebuffer*) malloc(sizeof(VkFramebuffer)*state->swapchainImageCount);
+    }
 
     for (uint32_t i = 0; i < state->swapchainImageCount; i++)
     {
@@ -674,6 +694,7 @@ void allocateCommandBuffers(State* state)
         .commandPool = state->commandPool
     };
 
+    
     state->commandBuffers = (VkCommandBuffer*) malloc(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT);
 
     assertVk(vkAllocateCommandBuffers(state->device,&allocInf,state->commandBuffers),
@@ -726,22 +747,15 @@ void cleanUp(State* state)
 
     vkDestroyCommandPool(state->device, state->commandPool, state->allocator);
 
-    for (uint32_t i = 0; i < state->swapchainImageCount; i++)
-    {
-        vkDestroyFramebuffer(state->device, state->swapChainFrameBuffers[i], state->allocator);
-    }
+
+    cleanUpSwapchain(state);
 
     vkDestroyPipeline(state->device, state->graphicsPipeline, state->allocator);
     vkDestroyPipelineLayout(state->device, state->pipelineLayout, state->allocator);
+    
     vkDestroyRenderPass(state->device, state->renderPass, state->allocator);
 
-    for (uint32_t i = 0; i < state->swapchainImageCount; i++)
-    {
-        vkDestroyImageView(state->device, state->imageViews[i], state->allocator);
 
-    }
-
-    vkDestroySwapchainKHR(state->device, state->swapchain, state->allocator);
     vkDestroySurfaceKHR(state->instance, state->surface, state->allocator);
     vkDestroyDevice(state->device, state->allocator);
     vkDestroyInstance(state->instance, state->allocator);
@@ -750,6 +764,18 @@ void cleanUp(State* state)
     glfwTerminate();
     
     exit(EXIT_SUCCESS);
+
+}
+
+void cleanUpSwapchain(State* state)
+{
+    for (uint32_t i = 0; i < state->swapchainImageCount; i++)
+    {
+        vkDestroyFramebuffer(state->device, state->swapChainFrameBuffers[i], state->allocator);
+        vkDestroyImageView(state->device, state->imageViews[i], state->allocator);
+    }
+    
+    vkDestroySwapchainKHR(state->device, state->swapchain, state->allocator);
 
 }
 
@@ -781,7 +807,7 @@ char* readShader(const char* filename, unsigned long* fileSize)
     char* bytes;
 
     file = fopen(filename, "rb");
-    assert(file, "failed to open file check file path", "opened shader code");
+    assert_my(file, "failed to open file check file path", "opened shader code");
 
     // change position to end of file to get size of file
     fseek(file, 0, SEEK_END);
@@ -791,7 +817,7 @@ char* readShader(const char* filename, unsigned long* fileSize)
     // set cursor bacl to start to read data properly
     fseek(file,0, SEEK_SET);    
     unsigned long bytesRead = fread(bytes, sizeof(char), (*fileSize), file);
-    assert(bytesRead == (*fileSize), "failed to read all data", "read all data from file");
+    assert_my(bytesRead == (*fileSize), "failed to read all data", "read all data from file");
 
     LOG("bytes read %lu", bytesRead);
 

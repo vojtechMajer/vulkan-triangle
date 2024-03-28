@@ -1,7 +1,9 @@
 #include "utils.h"
 #include "debug.h"
+#include "init.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <vulkan/vulkan_core.h>
 
 double clamp(int d, int min, int max)
@@ -70,4 +72,17 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Sta
     assertVk(vkEndCommandBuffer(commandBuffer), "Failed to record command buffer", "recorded command buffer");
     
 
+}
+
+
+void recreateSwapchain(State* state)
+{
+
+    vkDeviceWaitIdle(state->device);
+    cleanUpSwapchain(state);
+
+    createSwapchain(state);
+    retrieveSwapchainImages(state);
+    createImageViews(state);
+    createFramebuffers(state);
 }
