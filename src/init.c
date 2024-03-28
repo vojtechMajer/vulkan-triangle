@@ -3,6 +3,7 @@
 #include "debug.h"
 #include <GLFW/glfw3.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
 
@@ -80,6 +81,16 @@ void createWindow(State* state)
     state->window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan Triangle", NULL, NULL);
     assert_my(state->window, "failed to create window", "Created Window");
 
+    glfwSetWindowUserPointer(state->window, &state->frameBufferResized);
+    glfwSetFramebufferSizeCallback(state->window, framebufferResizeCallback );
+
+}
+
+void framebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+    VkBool32* framebufferResized = (VkBool32*) glfwGetWindowUserPointer(window);
+
+    *framebufferResized = VK_TRUE; 
 }
 
 VkResult initVulkan(State* state, VkInstance* pInstance)

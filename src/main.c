@@ -117,8 +117,9 @@ void drawFrame(State* state)
     // graphics queue should be present queue but graphics queue in this case also supports presenting
     VkResult queuePresentRslt = vkQueuePresentKHR(state->graphicsQueue, &presentInf);
 
-    if (queuePresentRslt == VK_ERROR_OUT_OF_DATE_KHR || queuePresentRslt == VK_SUBOPTIMAL_KHR)
+    if (queuePresentRslt == VK_ERROR_OUT_OF_DATE_KHR /*|| queuePresentRslt == VK_SUBOPTIMAL_KHR*/ || state->frameBufferResized)
     {
+        state->frameBufferResized = VK_FALSE;
         recreateSwapchain(state);
     } 
     else if (queuePresentRslt != VK_SUCCESS)

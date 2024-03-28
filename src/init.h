@@ -55,6 +55,7 @@ typedef struct State
     // Fence image in flight -> image is in flight [swapchain image count]
     VkFence* syncFenInFlight;
 
+    VkBool32 frameBufferResized;
 
 } State;
 
@@ -138,6 +139,8 @@ void createSyncObject(State* state);
 
 void cleanUp(State* state);
 void cleanUpSwapchain(State* state);
+
+void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
 VkShaderModule createShaderModule(const char* pathToShader, VkDevice device, VkAllocationCallbacks* allocator);
 char* readShader(const char* filename, unsigned long* fileSize);
