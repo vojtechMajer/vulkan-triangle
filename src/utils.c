@@ -43,6 +43,10 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Sta
     vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInf, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->graphicsPipeline);
+    
+    VkDeviceSize offsets[] = {0}; 
+
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &state->vertexBuffer, offsets);
 
     // Set dynamic stages
     VkViewport viewport = { 

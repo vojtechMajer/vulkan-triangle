@@ -5,9 +5,38 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include <vulkan/vulkan_core.h>
 
 #include "utils.h"
+
+Vertex vertices[] = {
+    {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}
+};
+
+VkVertexInputBindingDescription bindingDescription = {
+    .binding = 0,
+    .stride = sizeof(Vertex),
+    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+};
+
+VkVertexInputAttributeDescription attributeDescriptions[] = {
+    {
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Vertex, pos), 
+    },
+    {
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Vertex, color), 
+    }
+};
 
 void init(State* state)
 {
@@ -63,6 +92,8 @@ void init(State* state)
     createFramebuffers(state);
 
     createCommandPool(state);
+
+    createVertexBuffer(state);
 
     allocateCommandBuffers(state);
 
@@ -502,11 +533,11 @@ void createGraphicsPipeline(State* state)
         .pNext = NULL,
         .flags = 0,
         
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = NULL,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &bindingDescription,
 
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = NULL,
+        .vertexAttributeDescriptionCount = 2,
+        .pVertexAttributeDescriptions = attributeDescriptions,
     };
 
     // Assembly state
@@ -693,6 +724,59 @@ void createCommandPool(State* state)
         "failed to create command pool", "created command pool");
 }
 
+void createVertexBuffer(State* state)
+{
+    VkBufferCreateInfo bufferInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = sizeof(vertices[0]) * 3,
+        
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    assertVk(vkCreateBuffer(state->device, &bufferInfo, state->allocator, &state->vertexBuffer), "Failed to create frame buffer", "Created frame buffer");
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(state->device, state->vertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = memRequirements.size,
+    .memoryTypeIndex = findMemoryType(state, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+    
+    };
+
+    assertVk(vkAllocateMemory(state->device, &allocInfo, state->allocator, &state->vertexBufferMemory),
+    "Failed to allocate buffer memory", "allocated buffer memory");
+    
+    vkBindBufferMemory(state->device, state->vertexBuffer, state->vertexBufferMemory, 0);
+
+    void* data;
+    vkMapMemory(state->device, state->vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+    memcpy(data, vertices, (size_t) bufferInfo.size);
+    vkUnmapMemory(state->device, state->vertexBufferMemory);
+
+}
+
+
+uint32_t findMemoryType(State* state, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(state->physicalDevice, &memProperties);
+    
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        if (typeFilter & (1 << i) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    assert_my(-1, "Failed to find memory type", "");
+    exit(EXIT_FAILURE);
+}
+
 void allocateCommandBuffers(State* state)
 {
     VkCommandBufferAllocateInfo allocInf = {
@@ -711,10 +795,6 @@ void allocateCommandBuffers(State* state)
     assertVk(vkAllocateCommandBuffers(state->device,&allocInf,state->commandBuffers),
     "failed to allocate command buffer", "allocated command buffer");
 }
-
-
-
-
 
 void createSyncObject(State* state)
 {
@@ -760,6 +840,10 @@ void cleanUp(State* state)
 
 
     cleanUpSwapchain(state);
+
+    vkDestroyBuffer(state->device, state->vertexBuffer, state->allocator);
+    vkFreeMemory(state->device, state->vertexBufferMemory, state->allocator);
+
 
     vkDestroyPipeline(state->device, state->graphicsPipeline, state->allocator);
     vkDestroyPipelineLayout(state->device, state->pipelineLayout, state->allocator);

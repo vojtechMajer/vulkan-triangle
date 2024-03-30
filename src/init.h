@@ -46,6 +46,10 @@ typedef struct State
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
 
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
+
     // sync objects
 
     // semaphore image available -> image from swapchain is available(rendered) [swapchain image count]
@@ -132,6 +136,10 @@ void createGraphicsPipeline(State* state);
 void createFramebuffers(State* state);
 
 void createCommandPool(State* state);
+
+void createVertexBuffer(State* state);
+uint32_t findMemoryType(State* state, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
 void allocateCommandBuffers(State* state);
 
 void createSyncObject(State* state);

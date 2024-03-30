@@ -8,11 +8,14 @@
 
 #include "debug.h"
 #include "utils.h"
+#include <cglm/types.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <vulkan/vulkan_core.h>
 
+#include <cglm/cglm.h>
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -38,7 +41,7 @@ int main(void)
     }
 
     vkDeviceWaitIdle(state.device);
-
+    
     cleanUp(&state);
 
     exit(EXIT_SUCCESS);
@@ -65,7 +68,7 @@ void drawFrame(State* state)
         recreateSwapchain(state);
         return;
     } 
-    else if (acquireImagerslt != VK_SUCCESS && acquireImagerslt != VK_SUBOPTIMAL_KHR)
+    else if ((acquireImagerslt != VK_SUCCESS) && (acquireImagerslt != VK_SUBOPTIMAL_KHR))
     {
         assert_my(-1, "failed to acquire swapchain image", "");
     }
@@ -84,9 +87,10 @@ void drawFrame(State* state)
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = NULL,
 
+        .pWaitDstStageMask = waitStages,
+
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = state->syncSemImgAvail + currentFrame,
-        .pWaitDstStageMask = waitStages,
 
         .commandBufferCount = 1,
         .pCommandBuffers = state->commandBuffers + currentFrame,
@@ -117,7 +121,7 @@ void drawFrame(State* state)
     // graphics queue should be present queue but graphics queue in this case also supports presenting
     VkResult queuePresentRslt = vkQueuePresentKHR(state->graphicsQueue, &presentInf);
 
-    if (queuePresentRslt == VK_ERROR_OUT_OF_DATE_KHR /*|| queuePresentRslt == VK_SUBOPTIMAL_KHR*/ || state->frameBufferResized)
+    if (queuePresentRslt == VK_ERROR_OUT_OF_DATE_KHR || queuePresentRslt == VK_SUBOPTIMAL_KHR || state->frameBufferResized)
     {
         state->frameBufferResized = VK_FALSE;
         recreateSwapchain(state);
