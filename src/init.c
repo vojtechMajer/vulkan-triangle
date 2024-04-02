@@ -424,6 +424,7 @@ void createRenderPass(State* state)
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
+
     VkSubpassDependency dependency = {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
@@ -758,7 +759,6 @@ void createVertexBuffer(State* state)
     vkUnmapMemory(state->device, state->vertexBufferMemory);
 
 }
-
 
 uint32_t findMemoryType(State* state, uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
