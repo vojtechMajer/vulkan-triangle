@@ -738,25 +738,28 @@ void createVertexBuffer(State* state)
 
     assertVk(vkCreateBuffer(state->device, &bufferInfo, state->allocator, &state->vertexBuffer), "Failed to create frame buffer", "Created frame buffer");
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(state->device, state->vertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = findMemoryType(state, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-    
-    };
-
-    assertVk(vkAllocateMemory(state->device, &allocInfo, state->allocator, &state->vertexBufferMemory),
-    "Failed to allocate buffer memory", "allocated buffer memory");
-    
-    vkBindBufferMemory(state->device, state->vertexBuffer, state->vertexBufferMemory, 0);
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * 3; // vertices size
+    createBuffer(state, bufferSize, 
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+    &state->stagingBuffer, &state->stagingBufferMemory);
 
     void* data;
     vkMapMemory(state->device, state->vertexBufferMemory, 0, bufferInfo.size, 0, &data);
     memcpy(data, vertices, (size_t) bufferInfo.size);
     vkUnmapMemory(state->device, state->vertexBufferMemory);
+
+
+    createBuffer(state, bufferSize,
+    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    &state->vertexBuffer,
+    &state->vertexBufferMemory);
+
+    copyBuffer(state, state->stagingBuffer, state->vertexBuffer, bufferSize);
+
+    vkDestroyBuffer(state->device, state->stagingBuffer, state->allocator);
+    vkDestroyBuffer(state->device, state->vertexBuffer, state->allocator);
 
 }
 

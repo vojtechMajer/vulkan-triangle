@@ -49,6 +49,9 @@ typedef struct State
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
 
     // sync objects
 
