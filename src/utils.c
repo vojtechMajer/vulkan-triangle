@@ -50,8 +50,10 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Sta
 
     // Set dynamic stages
     VkViewport viewport = { 
+        
         .x = 0,
         .y = 0,
+
         .width = (float) state->extent.width,
         .height = (float) state->extent.height,
 

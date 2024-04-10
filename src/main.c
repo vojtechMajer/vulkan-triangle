@@ -30,6 +30,7 @@ int main(void)
         .allocator = NULL
     };
 
+
     init(&state);
 
     while (!glfwWindowShouldClose(state.window))
