@@ -94,6 +94,8 @@ void init(State* state)
     createCommandPool(state);
 
     createVertexBuffer(state);
+    // createIndexBuffer(state);
+
 
     allocateCommandBuffers(state);
 
@@ -727,39 +729,33 @@ void createCommandPool(State* state)
 
 void createVertexBuffer(State* state)
 {
-    VkBufferCreateInfo bufferInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = sizeof(vertices[0]) * 3,
-        
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-
-    assertVk(vkCreateBuffer(state->device, &bufferInfo, state->allocator, &state->vertexBuffer), "Failed to create frame buffer", "Created frame buffer");
-
     VkDeviceSize bufferSize = sizeof(vertices[0]) * 3; // vertices size
-    createBuffer(state, bufferSize, 
-    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &state->stagingBuffer, &state->stagingBufferMemory);
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    // staging buffer host and device visible
+    createBuffer(state, bufferSize,
+     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    &stagingBuffer, &stagingBufferMemory);
 
     void* data;
-    vkMapMemory(state->device, state->vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices, (size_t) bufferInfo.size);
-    vkUnmapMemory(state->device, state->vertexBufferMemory);
+    vkMapMemory(state->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices, bufferSize); // vertices to staging buffer
+    vkUnmapMemory(state->device, stagingBufferMemory);
 
-
+    // vertex buffer (device local)
     createBuffer(state, bufferSize,
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-    &state->vertexBuffer,
-    &state->vertexBufferMemory);
+    &state->vertexBuffer, &state->vertexBufferMemory);
 
-    copyBuffer(state, state->stagingBuffer, state->vertexBuffer, bufferSize);
+    // stagaing buffer -> device local buffer
+    copyBuffer(state, stagingBuffer, state->vertexBuffer, bufferSize);
 
-    vkDestroyBuffer(state->device, state->stagingBuffer, state->allocator);
-    vkDestroyBuffer(state->device, state->vertexBuffer, state->allocator);
+    // free staging buffer after being used 
+    vkDestroyBuffer(state->device, stagingBuffer, state->allocator);
+    vkFreeMemory(state->device, stagingBufferMemory, state->allocator);
 
 }
 

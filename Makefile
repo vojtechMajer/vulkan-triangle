@@ -12,7 +12,7 @@ CC := gcc
 # Wpedantic - Issue all the warnings demanded by strict ISO C and ISO C++; diagnose all programs that use forbidden extensions, and some other programs that do not follow ISO C and ISO C++. This follows the version of the ISO C or C++ standard specified by any -std option used.
 # O2 - optimization 2 can be set to 1, 2, 3
 # std - c standard
-CFLAGS := -Wall -Wpedantic -pedantic -O2 -std=c99
+CFLAGS := -Wall -Wpedantic -pedantic -O2 -std=c99 -g
 
 LDFLAGS := -lglfw -lvulkan
 
@@ -63,9 +63,7 @@ $(TARGET_EXEC): $(OBJS)
 # Build step for C source
 $(BUILD_DIR)/%.c.o: %.c
 	mkdir -p $(dir $@)
-
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
 
 .PHONY: clean
 clean:
