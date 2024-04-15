@@ -49,10 +49,9 @@ typedef struct State
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-
+   
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
     // sync objects
 
     // semaphore image available -> image from swapchain is available(rendered) [swapchain image count]
@@ -142,6 +141,8 @@ void createCommandPool(State* state);
 
 void createVertexBuffer(State* state);
 uint32_t findMemoryType(State* state, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+void createIndexBuffer(State* state);
 
 void allocateCommandBuffers(State* state);
 

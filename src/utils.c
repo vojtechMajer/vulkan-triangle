@@ -85,6 +85,8 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Sta
 
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &state->vertexBuffer, offsets);
 
+    vkCmdBindIndexBuffer(commandBuffer, state->indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
     // Set dynamic stages
     VkViewport viewport = { 
         
@@ -108,7 +110,8 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Sta
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 
-    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
